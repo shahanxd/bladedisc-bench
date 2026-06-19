@@ -98,6 +98,7 @@ using FusionPipeline = SmallVector<std::unique_ptr<FusionStrategy>>;
 //     - 2D column reduction: out[j] = sum({in[i][j] for all i}
 class FusionPlanner {
  public:
+ // >> prepares the plan for op fusion
   explicit FusionPlanner(FusionPipeline& pipeline, Block* block,
                          ShapeAnalysis* shapeAnalysis)
       : fusionPipeline_(pipeline),
@@ -850,6 +851,7 @@ struct DiscFusionPass : public DiscFusionPassBase<DiscFusionPass> {
     });
   }
 
+  // >> the fusion is applied here
   bool ApplyFusionPlan(FusionPlan& plan) {
     for (FusionPattern& pattern : plan) {
       if (disc_debug_max_fusion_number_ != INT_MIN) {
@@ -860,6 +862,7 @@ struct DiscFusionPass : public DiscFusionPassBase<DiscFusionPass> {
         }
         applied_fusion_numbers_++;
       }
+      // >> getting the list of ops to fuse
       auto& op_list = pattern.getOpList();
       OpBuilder b(op_list.back());
 
@@ -876,9 +879,11 @@ struct DiscFusionPass : public DiscFusionPassBase<DiscFusionPass> {
       
       // This is where fusion happens. the ops are iterated over and physically relocated
       // into the fusion op's region.
+      // >> creates a single fused op that contains all the operations in the pattern
       FusionOp fusion = b.create<lmhlo::FusionOp>(fused_loc);
       Region& region = fusion.getRegion();
       Block& block = region.front();
+      // >> manually move each op physically to Region of the fusion op
       for (Operation* op : llvm::reverse(op_list)) {
         op->moveBefore(&block, block.begin());
       }
