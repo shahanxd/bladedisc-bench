@@ -1,0 +1,21 @@
+// RUN: shape_analysis_tool -f %s | FileCheck %s
+
+// CHECK-LABEL: graph
+graph(%self : Float(28996, 768),
+      %indices : Long(8, 512)):
+  %false: bool = prim::Constant[value=0]()
+  %cst0 : int = prim::Constant[value=0]()
+// CHECK: Float(*, *, *) = aten::embedding
+  %embedding : Tensor = aten::embedding(%self, %indices, %cst0, %false, %false)
+  return (%embedding)
+
+
+// CHECK-LABEL: graph
+graph(%p1 : Float(*, *, *, device=cuda:0),
+      %p2 : Long(*, *, *, device=cuda:0),
+      %indices : Long(8, 512)):
+  %false: bool = prim::Constant[value=0]()
+  %1: int = prim::Constant[value=1]()
+// CHECK: Float(*, *, *, device=cuda:0) = aten::gather
+  %r : Tensor = aten::gather(%p1, %1, %p2, %false)
+  return (%r)

@@ -1,0 +1,195 @@
+// RUN: shape_analysis_tool -f %s | FileCheck %s
+
+// CHECK-LABEL: graph
+graph(%p1 : Float(48, 128, 768, requires_grad=0),
+      %p2 : Float(1, 128, 768, requires_grad=0),
+      %p3 : int):
+// CHECK: Float(*, *, *) = aten::add(%p1, %p2, %p3)
+  %1 : Tensor = aten::add(%p1, %p2, %p3)
+  return (%1)
+
+// CHECK-LABEL: graph
+graph(%p1 : Float(1, 512, requires_grad=0, device=cpu)):
+  %1 : int = prim::Constant[value=0]()
+  %2 : int = prim::Constant[value=1]()
+// CHECK: Float(1, 512, requires_grad=0, device=cpu) = aten::slice(%p1, %1, %1, %2, %2)
+  %3 : Tensor = aten::slice(%p1, %1, %1, %2, %2)
+  return (%3)
+
+// CHECK-LABEL: graph
+graph(%p1 : Float(*, *, *, requires_grad=0),
+      %p2 : Float(*, *, *, requires_grad=0),
+      %p3 : int):
+// CHECK: Float(*, *, *) = aten::add(%p1, %p2, %p3)
+  %1 : Tensor = aten::add(%p1, %p2, %p3)
+  return (%1)
+
+// CHECK-LABEL: graph
+graph(%p1 : Float(*, *, *),
+      %p2 : Float(*, *, *),
+      %p3 : int):
+// CHECK: Float(*, *, *) = aten::rsub
+  %1 : Tensor = aten::rsub(%p1, %p2, %p3)
+  return (%1)
+
+// CHECK-LABEL: graph
+graph(%p1 : Float(*, *, *),
+      %p2 : int):
+  %cstFloat: int = prim::Constant[value=0.5]()
+// CHECK: Float(*, *, *) = aten::rsub
+  %1 : Tensor = aten::rsub(%p1, %cstFloat, %p2)
+  return (%1)
+
+// CHECK-LABEL: graph
+graph(%p1 : Float(*, *, requires_grad=0, device=cpu)):
+  %1 : int = prim::Constant[value=0]()
+  %2 : int = prim::Constant[value=1]()
+// CHECK: Float(*, *, requires_grad=0, device=cpu) = aten::slice(%p1, %1, %1, %2, %2)
+  %3 : Tensor = aten::slice(%p1, %1, %1, %2, %2)
+  return (%3)
+
+// CHECK-LABEL: graph
+graph(%p1 : Float(8, 512, 768, device=cuda:0),
+      %p2 : Float(8, 512, 768, device=cuda:0)):
+// CHECK: Float(8, 512, 768, device=cuda:0) = aten::tanh_backward(%p1, %p2)
+  %1 : Tensor = aten::tanh_backward(%p1, %p2)
+  return (%1)
+
+// CHECK-LABEL: graph
+graph(%p1 : Float(*, *, *, device=cuda:0),
+      %p2 : Float(*, *, *, device=cuda:0)):
+// CHECK: Float(*, *, *, device=cuda:0) = aten::tanh_backward(%p1, %p2)
+  %1 : Tensor = aten::tanh_backward(%p1, %p2)
+  return (%1)
+
+
+// CHECK-LABEL: graph
+graph(%p1 : Float(*, *, *, *, device=cuda:0),
+  %p2 : Float(*, *, *, *, device=cuda:0),
+  %p3 : Float(*, device=cuda:0)
+):
+  %3 : int[] = prim::Constant[value=[1, 1]]()
+  %4 : bool = prim::Constant[value=0]()
+  %5 : int[] = prim::Constant[value=[0, 0]]()
+  %6 : int = prim::Constant[value=1]()
+  // CHECK: Float(*, *, *, *, device=cuda:0) = aten::_convolution(%p1, %p2, %p3, %3, %3, %3, %4, %5, %6, %4, %4, %4, %4)
+  %7 : Tensor = aten::_convolution(%p1, %p2, %p3, %3, %3, %3, %4, %5, %6, %4, %4, %4, %4)
+  return (%7)
+
+// CHECK-LABEL: graph
+graph(%p1 : Float(*, *, *, *, device=cuda:0),
+  %p2 : Float(*, *, *, *, device=cuda:0),
+  %p3 : Float(*, device=cuda:0)
+):
+  %3 : int[] = prim::Constant[value=[1, 1]]()
+  %4 : bool = prim::Constant[value=0]()
+  %5 : int[] = prim::Constant[value=[0, 0]]()
+  %6 : int = prim::Constant[value=1]()
+  // CHECK: Float(*, *, *, *, device=cuda:0) = aten::convolution(%p1, %p2, %p3, %3, %3, %3, %4, %5, %6)
+  %7 : Tensor = aten::convolution(%p1, %p2, %p3, %3, %3, %3, %4, %5, %6)
+  return (%7)
+
+
+// CHECK-LABEL: graph
+graph(%p1 : Float(*, *, *, device=cuda:0)):
+  %true: bool = prim::Constant[value=1]()
+  %false: bool = prim::Constant[value=0]()
+  %1: int = prim::Constant[value=1]()
+  %11: int = prim::Constant[value=11]()
+// CHECK: Float(*, *, *, device=cuda:0), %{{[a-z.0-9]+}} : Long(*, *, *, device=cuda:0) = aten::topk
+  %r1: Tensor, %idx1 : Tensor = aten::topk(%p1, %11, %1, %true, %true)
+// CHECK: Float(*, *, *, device=cuda:0), %{{[a-z.0-9]+}} : Long(*, *, *, device=cuda:0) = aten::topk
+  %r2: Tensor, %idx2 : Tensor = aten::topk(%p1, %11, %1, %true, %false)
+  return (%r1, %idx1, %r2, %idx2)
+
+// CHECK-LABEL: graph
+graph(%p1 : Float(2, 4, 16, 16, device=cuda:0)):
+  %1 : int = prim::Constant[value=-1]()
+// CHECK: Float(2, 4, 16, 8, device=cuda:0) = aten::glu(%p1, %1)
+  %2 : Tensor = aten::glu(%p1, %1)
+  return (%2)
+
+// CHECK-LABEL: graph
+graph(%p1 : Float(*, *, *, device=cuda:0)):
+  %1 : int = prim::Constant[value=-1]()
+// CHECK: Float(*, *, *, device=cuda:0) = aten::glu(%p1, %1)
+  %2 : Tensor = aten::glu(%p1, %1)
+  return (%2)
+
+// analysis fail, erase shape information
+// CHECK-LABEL: graph
+graph(%p1 : Float(*, *, *, device=cuda:0),
+      %p2 : Float(*, *, *, device=cuda:0),
+      %p3 : Float(*, *, *, device=cuda:0),
+      %p4 : Float(*, *, *, device=cuda:0),
+      %p5 : Float(*, *, *, device=cuda:0),
+      %p6 : Float(*, *, *, device=cuda:0)):
+// CHECK: Float(*, *, *, device=cuda:0) = aten::gru_cell(%p1, %p2, %p3, %p4, %p5, %p6)
+  %1 :  Float(32, 32, 10, device=cuda:0) = aten::gru_cell(%p1, %p2, %p3, %p4, %p5, %p6)
+  return (%1)
+
+// aten::split, aten::getitem
+// CHECK-LABEL: graph
+graph(%p1 : Float(*, *, 1536, device=cuda:0)):
+  %16 : int = prim::Constant[value=512]()
+  %17 : int = prim::Constant[value=-1]()
+  %19 : int = prim::Constant[value=0]()
+  %21 : int = prim::Constant[value=1]()
+  %23 : int = prim::Constant[value=2]()
+  %split : Tensor[] = aten::split(%p1, %16, %17)
+// CHECK:  Float(*, *, *, device=cuda:0) = aten::__getitem__
+// CHECK:  Float(*, *, *, device=cuda:0) = aten::__getitem__
+// CHECK:  Float(*, *, *, device=cuda:0) = aten::__getitem__
+  %getitem_1 : Tensor = aten::__getitem__(%split, %19)
+  %getitem_2 : Tensor = aten::__getitem__(%split, %21)
+  %getitem_3 : Tensor = aten::__getitem__(%split, %23)
+  return (%getitem_1, %getitem_2, %getitem_3)
+
+// aten::chunk, aten::getitem
+// CHECK-LABEL: graph
+graph(%p1 : Float(*, *, 1536, device=cuda:0)):
+  %16 : int = prim::Constant[value=3]()
+  %17 : int = prim::Constant[value=-1]()
+  %19 : int = prim::Constant[value=0]()
+  %21 : int = prim::Constant[value=1]()
+  %23 : int = prim::Constant[value=2]()
+  %split : Tensor[] = aten::chunk(%p1, %16, %17)
+// CHECK:  Float(*, *, *, device=cuda:0) = aten::__getitem__
+// CHECK:  Float(*, *, *, device=cuda:0) = aten::__getitem__
+// CHECK:  Float(*, *, *, device=cuda:0) = aten::__getitem__
+  %getitem_1 : Tensor = aten::__getitem__(%split, %19)
+  %getitem_2 : Tensor = aten::__getitem__(%split, %21)
+  %getitem_3 : Tensor = aten::__getitem__(%split, %23)
+  return (%getitem_1, %getitem_2, %getitem_3)
+
+// aten::unbind, aten::getitem
+// CHECK-LABEL: graph
+graph(%p1 : Float(*, *, *, device=cuda:0)):
+  %17 : int = prim::Constant[value=-1]()
+  %19 : int = prim::Constant[value=0]()
+  %21 : int = prim::Constant[value=1]()
+  %23 : int = prim::Constant[value=2]()
+  %split : Tensor[] = aten::unbind(%p1, %17)
+// CHECK:  Float(*, *, device=cuda:0) = aten::__getitem__
+// CHECK:  Float(*, *, device=cuda:0) = aten::__getitem__
+// CHECK:  Float(*, *, device=cuda:0) = aten::__getitem__
+  %getitem_1 : Tensor = aten::__getitem__(%split, %19)
+  %getitem_2 : Tensor = aten::__getitem__(%split, %21)
+  %getitem_3 : Tensor = aten::__getitem__(%split, %23)
+  return (%getitem_1, %getitem_2, %getitem_3)
+
+// aten::cuda
+// CHECK-LABEL: graph
+graph(%p1 : Float(*, *, *, device=cpu)):
+// CHECK: Float(*, *, *, device=cuda) = aten::cuda(%p1)
+  %2 : Tensor = aten::cuda(%p1)
+  return (%2)
+
+// erase tensor shape in tuple inputs
+// CHECK-LABEL: graph
+graph(%p1 : (Tensor, Tensor),
+    %p2 : int):
+// CHECK: Half(*, *, *, *, requires_grad=0, device=cuda:0)
+  %p1.1: Half(1, 1, 1, 1, requires_grad=0, device=cuda:0), %p11.1: Half(1, 1, 1, 1, requires_grad=0, device=cuda:0) = prim::TupleUnpack(%p1)
+  %2 = aten::add(%p1.1, %p11.1, %p2)
+  return (%2)

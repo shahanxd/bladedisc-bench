@@ -1,0 +1,26 @@
+build:ci_build --noshow_loading_progress --show_progress_rate_limit=600 --jobs=10
+
+build:disc --define framework_shared_object=false --experimental_multi_threaded_digest
+build:disc_cpu --config=disc --cxxopt=-DTAO_CPU_ONLY
+build:disc_x86 --config=disc_cpu --config=release_cpu_linux --cxxopt=-DTAO_X86 --define disc_x86=true
+build:disc_aarch64 --config=disc_cpu --config=mkl_aarch64 --cxxopt=-DTAO_AARCH64 --define disc_aarch64=true --linkopt="-Xlinker --stub-group-size -Xlinker 10000000"
+build:disc_cuda --config=disc --config=cuda
+build:disc_dcu --config=disc --config=dcu
+
+build:disc_mkldnn --config=disc --cxxopt=-DTAO_ENABLE_MKLDNN --define is_mkldnn=true
+build:disc_blaze --config=disc --cxxopt=-DBLAZE_OPT
+
+build:blade_gemm --define is_blade_gemm=true
+build:blade_gemm --cxxopt=-DENABLE_BLADE_GEMM
+
+build:platform_alibaba --define is_platform_alibaba=true
+build:platform_alibaba --cxxopt=-DPLATFORM_ALIBABA
+
+build:cxx11abi_0 --cxxopt=-D_GLIBCXX_USE_CXX11_ABI=0
+build:cxx11abi_1 --cxxopt=-D_GLIBCXX_USE_CXX11_ABI=1
+
+# Disable NCCL since TF head may drop suuport for lower CUDA version. Also disable others not in need.
+build --config=nonccl --config=noaws --config=nogcp --config=nohdfs
+
+build:skip_compute_intensive_fusion --define skip_compute_intensive_fusion=true
+build:skip_compute_intensive_fusion --cxxopt=-DSKIP_COMPUTE_INTENSIVE_FUSION

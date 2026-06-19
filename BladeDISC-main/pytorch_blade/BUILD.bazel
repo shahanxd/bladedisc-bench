@@ -1,0 +1,43 @@
+load("@com_github_bazelbuild_buildtools//buildifier:def.bzl", "buildifier")
+
+buildifier(
+    name = "buildifier",
+)
+
+config_setting(
+    name = "enable_cuda",
+    values = {"define": "enable_cuda=true"},
+)
+config_setting(
+    name = "enable_rocm",
+    values = {"define": "enable_rocm=true"},
+)
+config_setting(
+    name = "enable_tensorrt",
+    values = {"define": "enable_tensorrt=true"},
+)
+
+config_setting(
+    name = "enable_static_trt",
+    values = {"define": "enable_static_trt=true"},
+)
+
+config_setting(
+    name = "platform_alibaba",
+    values = {"define": "platform_alibaba=true"},
+)
+
+config_setting(
+    name = "enable_ltc_disc_backend",
+    values = {"define": "enable_ltc_disc_backend=true"}
+)
+
+config_setting(
+    name = "enable_quantization",
+    values = {"define": "enable_quantization=true"}
+)
+
+config_setting(
+    name = "enable_neural_engine",
+    values = {"define": "enable_neural_engine=true"}
+)

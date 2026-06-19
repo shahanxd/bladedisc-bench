@@ -1,0 +1,36 @@
+name: AMD-Workflow 
+
+on: workflow_dispatch
+
+jobs:
+  AMD:
+    if: github.repository == 'alibaba/BladeDISC'
+    # The type of runner that the job will run on
+    runs-on: [self-hosted, amd-gpu]
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+    # Runs a single command using the runners shell
+    - name: Checkout
+      uses: actions/checkout@v2.4.0
+    - name: Build Dev Docker
+      run: |
+        set -e
+        source $HOME/.cache/proxy_config
+        git submodule sync
+        git submodule update --depth=1 --init --recursive
+        docker build -t disc-dev-rocm \
+          -f docker/dev/Dockerfile.rocm5.2 .
+    - name: Build And Test
+      run: |
+        set -e
+        docker run --rm \
+          --device=/dev/kfd --device=/dev/dri \
+          -v /apsara/github-ci/:/home/$USER/ \
+          -v /etc/passwd:/etc/passwd:ro \
+          -v /etc/group:/etc/group:ro \
+          -v $PWD:/disc \
+          -e GITHUB_WORKFLOW=$GITHUB_WORKFLOW \
+          -e HOME=/home/$USER \
+          -w /disc \
+          -u $(id -u ${USER}):$(id -g ${USER}) \
+          disc-dev-rocm bash -c "bash ./scripts/ci/build_and_test.sh --rocm_path /opt/rocm-5.2.0 --rocm"
