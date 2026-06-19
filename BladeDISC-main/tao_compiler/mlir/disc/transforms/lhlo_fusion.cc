@@ -153,6 +153,8 @@ class FusionPlanner {
     // After doing edge contraction, each unique cluster having size
     // more than one represents a potential fusion pattern.
     // We collect all these clusters and construct a fusion plan.
+
+    // >> basically the plan for converting a cluster of fusable ops into a fused op
     FusionPlan plan;
     DenseSet<Cluster*> seen_clusters;
     for (Operation* op : op_list_) {
@@ -161,11 +163,13 @@ class FusionPlanner {
       FusionPattern& fusion_pattern = cluster->fused_pattern();
       // Make sure the ops in a fusion pattern are in topological ordering.
       fusion_pattern.sortFusionOpListBy(op_to_node_id_);
+      // >> if the pattern is not fusible or ineffective, skip it
       if (!fusion_pattern.isFusible() || fusion_pattern.effectiveSize() < 1 ||
           !fusion_pattern.isTransformBasedFusion() &&
               fusion_pattern.effectiveSize() == 1) {
         continue;
       }
+      // >> add the fusion plan to the plan
       plan.emplace_back(fusion_pattern);
     }
 
@@ -235,6 +239,11 @@ class FusionPlanner {
   // Metadata ops (e.g. shapeOf, dimOp) don't change data thus we move forward
   // them as far as possible inside the same block to enable more fusion
   // opportunities.
+
+  // unchanged op: those ops that don't affect the semantics of the program.
+  // examples: shapeOf, dimOp, etc.
+  // the logic: if the operand of an unchanged op is defined by an op
+  //    that has been moved up, then move the unchanged op up as well.
   void MoveUpMetadataOnlyOpsForFusion() {
     SmallVector<Operation*, 4> ops;
     for (Operation& op : *block_) {
@@ -245,6 +254,7 @@ class FusionPlanner {
       return op && op->getBlock() == block;
     };
 
+    // >> 
     for (Operation* op : ops) {
       Block* block = op->getBlock();
       if (isa<shape::ShapeOfOp>(op)) {
@@ -274,6 +284,8 @@ class FusionPlanner {
   }
 
   // Returns all the values touched by this op or its nested ops.
+  // why we need this: for op A->B->C, we need to know the values that
+  // op A needs, so we can build the dependency graph.
   SmallVector<Value, 4> GetAllPossibleUsedValues(Operation* op) {
     SmallVector<Value, 4> values;
     op->walk([&](Operation* nest_op) {
