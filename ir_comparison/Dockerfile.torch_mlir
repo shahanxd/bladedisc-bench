@@ -1,0 +1,10 @@
+FROM pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime
+
+# Inductor (torch.compile) requires a C compiler to build its generated kernels
+RUN apt-get update && apt-get install -y --no-install-recommends gcc g++ && rm -rf /var/lib/apt/lists/*
+
+RUN pip install --no-cache-dir \
+    torch-mlir -f https://github.com/llvm/torch-mlir-release/releases/expanded_assets/dev-wheels \
+    && pip install --no-cache-dir transformers
+
+WORKDIR /workspace
